@@ -1,0 +1,84 @@
+html, body { 
+  margin: 0; 
+  height: 100%; 
+  overflow: hidden; 
+  background: #000; 
+}
+canvas { 
+  display: block; 
+}
+
+/* Common window styles */
+.window {
+  position: absolute;
+  border: 2px solid white;
+  border-radius: 15px;
+  overflow: hidden;
+  min-width: 150px;
+  min-height: 150px;
+  pointer-events: auto;
+  mix-blend-mode: screen;  /* added for additive color mixing */
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+.window::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--window-color);
+  pointer-events: none;
+}
+/* Drag areas on top and left sides with drop-shadow gradient */
+.window .drag-area {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 30px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
+  cursor: move;
+}
+.window .drag-area-left {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(0,0,0,0.3), transparent);
+  cursor: move;
+}
+/* Resize handle */
+.window .resize-handle {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  background: white;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+/* Explosion animation for window deletion */
+.window.explosion {
+  animation: explosionAnim 0.5s forwards;
+}
+@keyframes explosionAnim {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.8); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Screen shake effect for viewport when explosion occurs */
+@keyframes screenShake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-10px, 5px); }
+  40% { transform: translate(8px, -10px); }
+  60% { transform: translate(-5px, 8px); }
+  80% { transform: translate(10px, -5px); }
+  100% { transform: translate(0, 0); }
+}
+#viewport.shake {
+  animation: screenShake 0.6s;
+}
