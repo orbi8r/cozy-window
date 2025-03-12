@@ -30,34 +30,14 @@ canvas {
   background: var(--window-color);
   pointer-events: none;
 }
-/* Drag areas on top and left sides with drop-shadow gradient */
+/* Single drag area with new distinct blue gradient */
 .window .drag-area {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 30px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
-  cursor: move;
-}
-.window .drag-area-left {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 30px;
   height: 100%;
-  background: linear-gradient(to right, rgba(0,0,0,0.3), transparent);
   cursor: move;
-}
-/* Resize handle */
-.window .resize-handle {
-  position: absolute;
-  width: 15px;
-  height: 15px;
-  background: white;
-  bottom: 0;
-  right: 0;
-  cursor: se-resize;
 }
 
 /* Explosion animation for window deletion */
@@ -81,4 +61,48 @@ canvas {
 }
 #viewport.shake {
   animation: screenShake 0.6s;
+}
+
+/* Global delete hint styling moved from inline styles */
+.global-delete-hint {
+  position: absolute;
+  background: red;
+  color: white;
+  font-size: 32px;
+  font-family: Arial, sans-serif;
+  padding: 10px 20px;
+  border-radius: 15px;
+  z-index: 9999;
+}
+
+/* Color picker control panel styling */
+.color-picker-control {
+  position: absolute;
+  top: 35px;
+  left: 35px;
+  z-index: 5;
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Remove inline styles from inner elements of the control panel */
+.color-picker-control label {
+  font-weight: bold;
+  margin-right: 8px;
+}
+.color-picker-control input[type="color"] {
+  vertical-align: middle;
+  border: none;
+  outline: none;
+}
+.color-picker-control button {
+  padding: 8px 12px;
+  border: none;
+  background: #4CAF50;
+  color: #fff;
+  border-radius: 5px;
+  cursor: pointer;
 }

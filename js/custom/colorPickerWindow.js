@@ -9,20 +9,13 @@
     }
     addControls() {
       const controlDiv = document.createElement('div');
-      controlDiv.style.position = 'absolute';
-      controlDiv.style.top = '35px';
-      controlDiv.style.left = '35px';
-      controlDiv.style.zIndex = '5';
-      controlDiv.style.background = '#fff';
-      controlDiv.style.padding = '15px';
-      controlDiv.style.borderRadius = '10px';
-      controlDiv.style.fontFamily = 'Arial, sans-serif';
-      controlDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+      // Remove inline style and apply CSS class for control panel.
+      controlDiv.classList.add('color-picker-control');
       controlDiv.innerHTML = `
-        <label style="font-weight:bold; margin-right:8px;">Pick a Color:</label>
-        <input type="color" id="custom-color" value="#0000ff" style="vertical-align:middle; border:none; outline:none;"/>
+        <label>Pick a Color:</label>
+        <input type="color" id="custom-color" value="#0000ff"/>
         <br/><br/>
-        <button id="spawn-new" style="padding:8px 12px; border:none; background:#4CAF50; color:#fff; border-radius:5px; cursor:pointer;">Spawn New Window</button>
+        <button id="spawn-new">Spawn New Window</button>
       `;
       this.element.appendChild(controlDiv);
       controlDiv.addEventListener('mousedown', e => e.stopPropagation());
