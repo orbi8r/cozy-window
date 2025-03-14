@@ -64,33 +64,29 @@ function initDots() {
 	}
 }
 
-canvas.addEventListener('mousemove', function(e) {
+// Remove/ignore separate mousemove and touchmove listeners
+// Add pointermove listener for both mouse and touch
+canvas.addEventListener('pointermove', function(e) {
+	// Update mouse coordinates for hover animation
 	const rect = canvas.getBoundingClientRect();
 	mouse.x = e.clientX - rect.left;
 	mouse.y = e.clientY - rect.top;
-});
-
-// New touchmove listener for mobile/touch devices
-canvas.addEventListener('touchmove', function(e) {
-	const rect = canvas.getBoundingClientRect();
-	const touch = e.touches[0];
-	mouse.x = touch.clientX - rect.left;
-	mouse.y = touch.clientY - rect.top;
 	e.preventDefault();
 });
 
-// Optionally, map touchstart to click if needed
-canvas.addEventListener('touchstart', function(e){
-	const rect = canvas.getBoundingClientRect();
-	const touch = e.touches[0];
-	const simulatedEvent = new MouseEvent('click', {
-		clientX: touch.clientX,
-		clientY: touch.clientY,
-		bubbles: true,
-		cancelable: true
-	});
-	canvas.dispatchEvent(simulatedEvent);
-	e.preventDefault();
+// Use pointerdown to simulate a click on touch devices if needed
+canvas.addEventListener('pointerdown', function(e) {
+	// For touch devices, simulate a click event
+	if (e.pointerType === 'touch') {
+		const rect = canvas.getBoundingClientRect();
+		const simulatedEvent = new MouseEvent('click', {
+			clientX: e.clientX,
+			clientY: e.clientY,
+			bubbles: true,
+			cancelable: true
+		});
+		canvas.dispatchEvent(simulatedEvent);
+	}
 });
 
 // New listener for windowmove events.
