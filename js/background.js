@@ -70,29 +70,6 @@ canvas.addEventListener('mousemove', function(e) {
 	mouse.y = e.clientY - rect.top;
 });
 
-// New touchmove listener for mobile/touch devices
-canvas.addEventListener('touchmove', function(e) {
-	const rect = canvas.getBoundingClientRect();
-	const touch = e.touches[0];
-	mouse.x = touch.clientX - rect.left;
-	mouse.y = touch.clientY - rect.top;
-	e.preventDefault();
-});
-
-// Optionally, map touchstart to click if needed
-canvas.addEventListener('touchstart', function(e){
-	const rect = canvas.getBoundingClientRect();
-	const touch = e.touches[0];
-	const simulatedEvent = new MouseEvent('click', {
-		clientX: touch.clientX,
-		clientY: touch.clientY,
-		bubbles: true,
-		cancelable: true
-	});
-	canvas.dispatchEvent(simulatedEvent);
-	e.preventDefault();
-});
-
 // New listener for windowmove events.
 canvas.addEventListener('windowmove', function(e) {
 	// Each event now carries: x, y, velocity {vx,vy}, and area.
