@@ -54,9 +54,20 @@ class BaseWindow {
       e.preventDefault();
     };
 
-    // Use pointer events for dragging
-    this.dragArea.addEventListener('pointerdown', dragStart);
-    document.addEventListener('pointermove', (e) => {
+    // Touch version of dragStart
+    const touchStart = (e) => {
+      const touch = e.touches[0];
+      isDragging = true;
+      offsetX = touch.clientX - this.element.offsetLeft;
+      offsetY = touch.clientY - this.element.offsetTop;
+      this.element.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
+      e.preventDefault();
+    };
+
+    this.dragArea.addEventListener('mousedown', dragStart);
+    this.dragArea.addEventListener('touchstart', touchStart);
+
+    document.addEventListener('mousemove', (e) => {
       if (isDragging) {
         const newLeft = e.clientX - offsetX;
         const newTop = e.clientY - offsetY;
@@ -78,6 +89,7 @@ class BaseWindow {
             globalHint = document.createElement('div');
             globalHint.id = 'global-delete-hint';
             globalHint.textContent = 'DELETE';
+            // Removed inline style assignments; using CSS class instead.
             globalHint.classList.add('global-delete-hint');
             document.getElementById('viewport').appendChild(globalHint);
           }
@@ -120,6 +132,75 @@ class BaseWindow {
         }));
       }
     });
+    document.addEventListener('touchmove', (e) => {
+      if (isDragging) {
+        const touch = e.touches[0];
+        const newLeft = touch.clientX - offsetX;
+        const newTop = touch.clientY - offsetY;
+        this.element.style.left = newLeft + 'px';
+        this.element.style.top = newTop + 'px';
+        // Replicate delete zone logic using touch coordinates
+        const rect = this.element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const area = rect.width * rect.height;
+        const velocity = { vx: touch.clientX - centerX, vy: touch.clientY - centerY };
+        if (this.config.deletable !== false &&
+           (rect.left < deleteThreshold ||
+            rect.top < deleteThreshold ||
+            rect.right > window.innerWidth - deleteThreshold ||
+            rect.bottom > window.innerHeight - deleteThreshold)) {
+          inDeleteZone = true;
+          let globalHint = document.getElementById('global-delete-hint');
+          if (!globalHint) {
+            globalHint = document.createElement('div');
+            globalHint.id = 'global-delete-hint';
+            globalHint.textContent = 'DELETE';
+            globalHint.classList.add('global-delete-hint');
+            document.getElementById('viewport').appendChild(globalHint);
+          }
+          // ...existing code to position globalHint...
+          const distances = {
+            left: rect.left,
+            top: rect.top,
+            right: window.innerWidth - (rect.left + rect.width),
+            bottom: window.innerHeight - (rect.top + rect.height)
+          };
+          const minDistance = Math.min(distances.left, distances.top, distances.right, distances.bottom);
+          let hintX = 0, hintY = 0;
+          if (minDistance === distances.left) {
+            hintX = 5;
+            hintY = rect.top + rect.height / 2 - 25;
+          } else if (minDistance === distances.top) {
+            hintX = rect.left + rect.width / 2 - 50;
+            hintY = 5;
+          } else if (minDistance === distances.right) {
+            hintX = window.innerWidth - 105;
+            hintY = rect.top + rect.height / 2 - 25;
+          } else {
+            hintX = rect.left + rect.width / 2 - 50;
+            hintY = window.innerHeight - 55;
+          }
+          globalHint.style.left = hintX + 'px';
+          globalHint.style.top = hintY + 'px';
+          globalHint.style.opacity = '1';
+        } else {
+          inDeleteZone = false;
+          let globalHint = document.getElementById('global-delete-hint');
+          if (globalHint) {
+            globalHint.style.opacity = '0';
+            setTimeout(() => {
+              if (globalHint && globalHint.style.opacity === '0') globalHint.remove();
+            }, 300);
+          }
+        }
+        this.canvas.dispatchEvent(new CustomEvent('windowmove', { 
+          detail: { x: centerX, y: centerY, velocity, area, id: this.element.id } 
+        }));
+        e.preventDefault();
+      }
+    });
+
     const dragEnd = () => {
       if (isDragging) {
         if (inDeleteZone && this.config.deletable !== false) {
@@ -144,14 +225,16 @@ class BaseWindow {
         this.element.style.boxShadow = '';
       }
     };
-    document.addEventListener('pointerup', dragEnd);
+
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('touchend', dragEnd);
   }
   setupResizing() {
     const borderThreshold = 10;
     let isResizing = false, startX, startY, startWidth, startHeight, startLeft, startTop;
     let activeEdges = { left: false, right: false, top: false, bottom: false };
 
-    const onPointerDown = (e) => {
+    const onMouseDown = (e) => {
       const rect = this.element.getBoundingClientRect();
       startX = e.clientX;
       startY = e.clientY;
@@ -172,7 +255,30 @@ class BaseWindow {
       }
     };
 
-    const onPointerMove = (e) => {
+    // Touch version of onMouseDown for resizing
+    const onTouchStart = (e) => {
+      const touch = e.touches[0];
+      const rect = this.element.getBoundingClientRect();
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startWidth = rect.width;
+      startHeight = rect.height;
+      startLeft = rect.left;
+      startTop = rect.top;
+      activeEdges = {
+        left: touch.clientX - rect.left <= borderThreshold,
+        right: rect.right - touch.clientX <= borderThreshold,
+        top: touch.clientY - rect.top <= borderThreshold,
+        bottom: rect.bottom - touch.clientY <= borderThreshold
+      };
+      if (activeEdges.left || activeEdges.right || activeEdges.top || activeEdges.bottom) {
+        isResizing = true;
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const onMouseMove = (e) => {
       if (isResizing) {
         let newWidth = startWidth;
         let newHeight = startHeight;
@@ -225,16 +331,61 @@ class BaseWindow {
       }
     };
 
-    const onPointerUp = () => {
+    const onTouchMove = (e) => {
+      if (isResizing) {
+        const touch = e.touches[0];
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        let newLeft = startLeft;
+        let newTop = startTop;
+        if (activeEdges.right) {
+          newWidth = Math.max(startWidth + (touch.clientX - startX), this.config.minWidth);
+        }
+        if (activeEdges.bottom) {
+          newHeight = Math.max(startHeight + (touch.clientY - startY), this.config.minHeight);
+        }
+        if (activeEdges.left) {
+          newWidth = Math.max(startWidth - (touch.clientX - startX), this.config.minWidth);
+          newLeft = startLeft + (touch.clientX - startX);
+        }
+        if (activeEdges.top) {
+          newHeight = Math.max(startHeight - (touch.clientY - startY), this.config.minHeight);
+          newTop = startTop + (touch.clientY - startY);
+        }
+        this.element.style.width = newWidth + 'px';
+        this.element.style.height = newHeight + 'px';
+        this.element.style.left = newLeft + 'px';
+        this.element.style.top = newTop + 'px';
+        const rect = this.element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        this.canvas.dispatchEvent(new CustomEvent('windowmove', { 
+          detail: { x: centerX, y: centerY, velocity: { vx: 0, vy: 0 }, area: newWidth * newHeight, id: this.element.id }
+        }));
+        e.preventDefault();
+      }
+    };
+
+    const onMouseUp = () => {
       if (isResizing) {
         isResizing = false;
         this.element.style.cursor = '';
       }
     };
 
-    this.element.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup', onPointerUp);
+    const onTouchEnd = () => {
+      if (isResizing) {
+        isResizing = false;
+        this.element.style.cursor = '';
+      }
+    };
+
+    this.element.addEventListener('mousedown', onMouseDown);
+    this.element.addEventListener('touchstart', onTouchStart);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchend', onTouchEnd);
   }
   forwardEvents() {
     const forward = (e) => {
