@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Create version info element
 	const versionDiv = document.createElement('div');
 	versionDiv.id = 'version-info';
-	versionDiv.textContent = 'v0.1.1c';
+	versionDiv.textContent = 'v0.1.1';
 	// Style for fixed bottom right display
 	versionDiv.style.position = 'fixed';
 	versionDiv.style.bottom = '10px';

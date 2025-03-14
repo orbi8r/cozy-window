@@ -74,30 +74,19 @@ canvas.addEventListener('pointermove', function(e) {
 	e.preventDefault();
 });
 
-// Remove old pointerdown simulation and add deferred tap detection:
-let lastPointerDown = null;
+// Use pointerdown to simulate a click on touch devices if needed
 canvas.addEventListener('pointerdown', function(e) {
-  if(e.pointerType === 'touch'){
-    lastPointerDown = { time: performance.now(), x: e.clientX, y: e.clientY };
-  }
-});
-canvas.addEventListener('pointerup', function(e) {
-  if(e.pointerType === 'touch' && lastPointerDown){
-    const dt = performance.now() - lastPointerDown.time;
-    const dx = e.clientX - lastPointerDown.x;
-    const dy = e.clientY - lastPointerDown.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if(dist < 10 && dt < 200){
-      const simulatedEvent = new MouseEvent('click', {
-        clientX: e.clientX,
-        clientY: e.clientY,
-        bubbles: true,
-        cancelable: true
-      });
-      canvas.dispatchEvent(simulatedEvent);
-    }
-    lastPointerDown = null;
-  }
+	// For touch devices, simulate a click event
+	if (e.pointerType === 'touch') {
+		const rect = canvas.getBoundingClientRect();
+		const simulatedEvent = new MouseEvent('click', {
+			clientX: e.clientX,
+			clientY: e.clientY,
+			bubbles: true,
+			cancelable: true
+		});
+		canvas.dispatchEvent(simulatedEvent);
+	}
 });
 
 // New listener for windowmove events.
