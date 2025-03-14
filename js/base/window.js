@@ -43,85 +43,102 @@ class BaseWindow {
   }
   setupDragging() {
     let isDragging = false, offsetX = 0, offsetY = 0;
-    const deleteThreshold = 50; // px from any screen edge triggers deletion zone
+    let currentX = 0, currentY = 0, targetX = 0, targetY = 0;
+    let dragRAFID = null;
+    const deleteThreshold = 50;
     let inDeleteZone = false;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    
+    const updateDrag = () => {
+      if(!isDragging) return;
+      currentX = lerp(currentX, targetX, 0.2);
+      currentY = lerp(currentY, targetY, 0.2);
+      this.element.style.left = currentX + 'px';
+      this.element.style.top = currentY + 'px';
+      
+      // Update deletion zone and dispatch windowmove event
+      const rect = this.element.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const area = rect.width * rect.height;
+      const velocity = { vx: targetX - currentX, vy: targetY - currentY };
+      if (this.config.deletable !== false &&
+         (rect.left < deleteThreshold ||
+          rect.top < deleteThreshold ||
+          rect.right > window.innerWidth - deleteThreshold ||
+          rect.bottom > window.innerHeight - deleteThreshold)) {
+        inDeleteZone = true;
+        let globalHint = document.getElementById('global-delete-hint');
+        if (!globalHint) {
+          globalHint = document.createElement('div');
+          globalHint.id = 'global-delete-hint';
+          globalHint.textContent = 'DELETE';
+          globalHint.classList.add('global-delete-hint');
+          document.getElementById('viewport').appendChild(globalHint);
+        }
+        const distances = {
+          left: rect.left,
+          top: rect.top,
+          right: window.innerWidth - (rect.left + rect.width),
+          bottom: window.innerHeight - (rect.top + rect.height)
+        };
+        const minDistance = Math.min(distances.left, distances.top, distances.right, distances.bottom);
+        let hintX = 0, hintY = 0;
+        if (minDistance === distances.left) {
+          hintX = 5;
+          hintY = rect.top + rect.height / 2 - 25;
+        } else if (minDistance === distances.top) {
+          hintX = rect.left + rect.width / 2 - 50;
+          hintY = 5;
+        } else if (minDistance === distances.right) {
+          hintX = window.innerWidth - 105;
+          hintY = rect.top + rect.height / 2 - 25;
+        } else {
+          hintX = rect.left + rect.width / 2 - 50;
+          hintY = window.innerHeight - 55;
+        }
+        globalHint.style.left = hintX + 'px';
+        globalHint.style.top = hintY + 'px';
+        globalHint.style.opacity = '1';
+      } else {
+        inDeleteZone = false;
+        let globalHint = document.getElementById('global-delete-hint');
+        if (globalHint) {
+          globalHint.style.opacity = '0';
+          setTimeout(() => {
+            if (globalHint && globalHint.style.opacity === '0') globalHint.remove();
+          }, 300);
+        }
+      }
+      this.canvas.dispatchEvent(new CustomEvent('windowmove', { 
+        detail: { x: centerX, y: centerY, velocity, area, id: this.element.id } 
+      }));
+      dragRAFID = requestAnimationFrame(updateDrag);
+    };
     
     const dragStart = (e) => {
       isDragging = true;
       offsetX = e.clientX - this.element.offsetLeft;
       offsetY = e.clientY - this.element.offsetTop;
+      currentX = this.element.offsetLeft;
+      currentY = this.element.offsetTop;
+      targetX = currentX;
+      targetY = currentY;
       this.element.style.boxShadow = '0 8px 16px rgba(0,0,0,0.5)';
       e.preventDefault();
+      dragRAFID = requestAnimationFrame(updateDrag);
     };
-
-    // Use pointer events for dragging
+    
     this.dragArea.addEventListener('pointerdown', dragStart);
     document.addEventListener('pointermove', (e) => {
       if (isDragging) {
-        const newLeft = e.clientX - offsetX;
-        const newTop = e.clientY - offsetY;
-        this.element.style.left = newLeft + 'px';
-        this.element.style.top = newTop + 'px';
-        const rect = this.element.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const area = rect.width * rect.height;
-        const velocity = { vx: e.clientX - centerX, vy: e.clientY - centerY };
-        if (this.config.deletable !== false &&
-           (rect.left < deleteThreshold ||
-            rect.top < deleteThreshold ||
-            rect.right > window.innerWidth - deleteThreshold ||
-            rect.bottom > window.innerHeight - deleteThreshold)) {
-          inDeleteZone = true;
-          let globalHint = document.getElementById('global-delete-hint');
-          if (!globalHint) {
-            globalHint = document.createElement('div');
-            globalHint.id = 'global-delete-hint';
-            globalHint.textContent = 'DELETE';
-            globalHint.classList.add('global-delete-hint');
-            document.getElementById('viewport').appendChild(globalHint);
-          }
-          const distances = {
-            left: rect.left,
-            top: rect.top,
-            right: window.innerWidth - (rect.left + rect.width),
-            bottom: window.innerHeight - (rect.top + rect.height)
-          };
-          const minDistance = Math.min(distances.left, distances.top, distances.right, distances.bottom);
-          let hintX = 0, hintY = 0;
-          if (minDistance === distances.left) {
-            hintX = 5;
-            hintY = rect.top + rect.height / 2 - 25;
-          } else if (minDistance === distances.top) {
-            hintX = rect.left + rect.width / 2 - 50;
-            hintY = 5;
-          } else if (minDistance === distances.right) {
-            hintX = window.innerWidth - 105;
-            hintY = rect.top + rect.height / 2 - 25;
-          } else {
-            hintX = rect.left + rect.width / 2 - 50;
-            hintY = window.innerHeight - 55;
-          }
-          globalHint.style.left = hintX + 'px';
-          globalHint.style.top = hintY + 'px';
-          globalHint.style.opacity = '1';
-        } else {
-          inDeleteZone = false;
-          let globalHint = document.getElementById('global-delete-hint');
-          if (globalHint) {
-            globalHint.style.opacity = '0';
-            setTimeout(() => {
-              if (globalHint && globalHint.style.opacity === '0') globalHint.remove();
-            }, 300);
-          }
-        }
-        this.canvas.dispatchEvent(new CustomEvent('windowmove', { 
-          detail: { x: centerX, y: centerY, velocity, area, id: this.element.id } 
-        }));
+        targetX = e.clientX - offsetX;
+        targetY = e.clientY - offsetY;
       }
     });
     const dragEnd = () => {
       if (isDragging) {
+        cancelAnimationFrame(dragRAFID);
         if (inDeleteZone && this.config.deletable !== false) {
           const rect = this.element.getBoundingClientRect();
           const delX = rect.left + rect.width / 2;
@@ -137,9 +154,7 @@ class BaseWindow {
           }, 500);
         }
         let globalHint = document.getElementById('global-delete-hint');
-        if (globalHint) {
-          globalHint.remove();
-        }
+        if (globalHint) { globalHint.remove(); }
         isDragging = false;
         this.element.style.boxShadow = '';
       }
@@ -150,7 +165,24 @@ class BaseWindow {
     const borderThreshold = 10;
     let isResizing = false, startX, startY, startWidth, startHeight, startLeft, startTop;
     let activeEdges = { left: false, right: false, top: false, bottom: false };
-
+    let currentWidth, currentHeight, currentLeft, currentTop;
+    let targetWidth, targetHeight, targetLeft, targetTop;
+    let resizeRAFID;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    
+    const updateResize = () => {
+      if (!isResizing) return;
+      currentWidth = lerp(currentWidth, targetWidth, 0.2);
+      currentHeight = lerp(currentHeight, targetHeight, 0.2);
+      currentLeft = lerp(currentLeft, targetLeft, 0.2);
+      currentTop = lerp(currentTop, targetTop, 0.2);
+      this.element.style.width = currentWidth + 'px';
+      this.element.style.height = currentHeight + 'px';
+      this.element.style.left = currentLeft + 'px';
+      this.element.style.top = currentTop + 'px';
+      resizeRAFID = requestAnimationFrame(updateResize);
+    };
+    
     const onPointerDown = (e) => {
       const rect = this.element.getBoundingClientRect();
       startX = e.clientX;
@@ -159,6 +191,10 @@ class BaseWindow {
       startHeight = rect.height;
       startLeft = rect.left;
       startTop = rect.top;
+      currentWidth = startWidth;
+      currentHeight = startHeight;
+      currentLeft = startLeft;
+      currentTop = startTop;
       activeEdges = {
         left: e.clientX - rect.left <= borderThreshold,
         right: rect.right - e.clientX <= borderThreshold,
@@ -169,15 +205,17 @@ class BaseWindow {
         isResizing = true;
         e.preventDefault();
         e.stopPropagation();
+        targetWidth = startWidth;
+        targetHeight = startHeight;
+        targetLeft = startLeft;
+        targetTop = startTop;
+        resizeRAFID = requestAnimationFrame(updateResize);
       }
     };
-
+    
     const onPointerMove = (e) => {
       if (isResizing) {
-        let newWidth = startWidth;
-        let newHeight = startHeight;
-        let newLeft = startLeft;
-        let newTop = startTop;
+        let newWidth = startWidth, newHeight = startHeight, newLeft = startLeft, newTop = startTop;
         if (activeEdges.right) {
           newWidth = Math.max(startWidth + (e.clientX - startX), this.config.minWidth);
         }
@@ -192,16 +230,11 @@ class BaseWindow {
           newHeight = Math.max(startHeight - (e.clientY - startY), this.config.minHeight);
           newTop = startTop + (e.clientY - startY);
         }
-        this.element.style.width = newWidth + 'px';
-        this.element.style.height = newHeight + 'px';
-        this.element.style.left = newLeft + 'px';
-        this.element.style.top = newTop + 'px';
-        const rect = this.element.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        this.canvas.dispatchEvent(new CustomEvent('windowmove', { 
-          detail: { x: centerX, y: centerY, velocity: { vx: 0, vy: 0 }, area: newWidth * newHeight, id: this.element.id }
-        }));
+        targetWidth = newWidth;
+        targetHeight = newHeight;
+        targetLeft = newLeft;
+        targetTop = newTop;
+        e.preventDefault();
       } else {
         const rect = this.element.getBoundingClientRect();
         const x = e.clientX, y = e.clientY;
@@ -224,14 +257,15 @@ class BaseWindow {
         this.element.style.cursor = cursor;
       }
     };
-
+    
     const onPointerUp = () => {
       if (isResizing) {
+        cancelAnimationFrame(resizeRAFID);
         isResizing = false;
         this.element.style.cursor = '';
       }
     };
-
+    
     this.element.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('pointermove', onPointerMove);
     document.addEventListener('pointerup', onPointerUp);
